@@ -1,0 +1,63 @@
+{
+  "common": {
+    "loading": "Loading",
+    "error": "Error",
+    "success": "Success",
+    "close": "Close",
+    "dismiss": "Dismiss",
+    "retry": "Retry",
+    "back": "Back",
+    "next": "Next",
+    "continue": "Continue",
+    "cancel": "Cancel"
+  },
+  "header": {
+    "title": "StellarSwipe",
+    "dashboard": "Dashboard",
+    "leaderboard": "Leaderboard",
+    "portfolio": "Portfolio",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "signals": {
+    "signal_feed": "Signal Feed",
+    "buy_signal": "BUY Signal",
+    "sell_signal": "SELL Signal",
+    "execution_price": "Execution Price",
+    "confidence": "Confidence",
+    "target": "Target",
+    "roi": "ROI",
+    "swipe_or_use_keys": "Swipe or use ← → keys",
+    "pass": "Pass",
+    "execute_trade": "Execute Trade",
+    "demo_trade": "Demo Trade",
+    "share": "Share"
+  },
+  "trade": {
+    "trade_executed": "Trade Executed",
+    "trade_failed": "Trade Failed",
+    "swap_completed": "Your swap completed successfully",
+    "view_portfolio": "View Portfolio",
+    "continue_swiping": "Continue Swiping",
+    "transaction": "Transaction"
+  },
+  "notifications": {
+    "enable_notifications": "Enable Notifications",
+    "notifications_disabled": "Notifications are disabled. Check your browser settings to enable.",
+    "trade_success": "Trade Executed",
+    "trade_failure": "Trade Failed"
+  },
+  "wallet": {
+    "connect_wallet": "Connect Wallet",
+    "disconnect_wallet": "Disconnect Wallet",
+    "wallet_connected": "Wallet connected",
+    "wallet_disconnected": "Wallet disconnected",
+    "connection_failed": "Failed to connect wallet",
+    "connection_declined": "Connection request declined"
+  },
+  "footer": {
+    "about": "About",
+    "analytics": "Analytics",
+    "documentation": "Documentation"
+  }
+}
