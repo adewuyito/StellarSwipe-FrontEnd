@@ -2,14 +2,18 @@
 
 import { useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, ArrowRight, Eye, X } from "lucide-react";
+import { CheckCircle, ArrowRight, Eye, X, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTransactionStore } from "@/store/useTransactionStore";
+import { showNotification } from "@/lib/notifications";
+import { useNotificationPreference } from "@/hooks/useNotificationPreference";
+import analyticsService from "@/services/analytics";
 
 const AUTO_DISMISS_MS = 8000;
 
 export function TransactionSuccess() {
   const { success, showSuccess, clearSuccess } = useTransactionStore();
+  const { alertsEnabled, toggleAlerts } = useNotificationPreference();
 
   const handleViewPortfolio = useCallback(() => {
     clearSuccess();
@@ -17,6 +21,21 @@ export function TransactionSuccess() {
   }, [clearSuccess]);
 
   const handleContinueSwiping = useCallback(() => clearSuccess(), [clearSuccess]);
+
+  useEffect(() => {
+    if (!showSuccess || !success) return;
+    if (alertsEnabled) {
+      showNotification("Trade Executed", {
+        body: `Your swap for ${success.token} at ${success.price} completed successfully`,
+        icon: "✓",
+      });
+    }
+    analyticsService.track('trade_confirmation_success', {
+      asset_pair: success.token,
+      amount: success.amount,
+      price: success.price,
+    });
+  }, [showSuccess, success, alertsEnabled]);
 
   useEffect(() => {
     if (!showSuccess) return;
@@ -53,13 +72,27 @@ export function TransactionSuccess() {
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
-            <button
-              onClick={clearSuccess}
-              aria-label="Close"
-              className="absolute right-4 top-4 rounded-full p-1 text-foreground-subtle transition-colors hover:bg-surface-high hover:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
+            <div className="absolute right-4 top-4 flex gap-2">
+              <button
+                onClick={() => toggleAlerts(!alertsEnabled)}
+                aria-label={alertsEnabled ? "Disable outcome alerts" : "Enable outcome alerts"}
+                className="rounded-full p-1 text-foreground-subtle transition-colors hover:bg-surface-high hover:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title={alertsEnabled ? "Alerts enabled" : "Alerts disabled"}
+              >
+                {alertsEnabled ? (
+                  <Bell className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <BellOff className="h-4 w-4" aria-hidden="true" />
+                )}
+              </button>
+              <button
+                onClick={clearSuccess}
+                aria-label="Close"
+                className="rounded-full p-1 text-foreground-subtle transition-colors hover:bg-surface-high hover:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
 
             <div className="mb-4 flex justify-center">
               <motion.div

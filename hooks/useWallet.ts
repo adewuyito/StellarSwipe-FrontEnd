@@ -11,6 +11,7 @@ import { useWalletStore } from "@/store/useWalletStore";
 import { NETWORK_PASSPHRASE } from "@/lib/stellar";
 import { toast } from "@/lib/toast";
 import { traceWorker } from "@/src/tracing/worker-tracing.service";
+import analyticsService from "@/services/analytics";
 
 function isUserRejection(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -42,6 +43,10 @@ export function useWallet() {
       const connectedResponse = await isConnected();
       if (!connectedResponse?.isConnected) {
         toast.error("Freighter wallet not found. Please install it.");
+        analyticsService.track('wallet_connect_failed', {
+          wallet_type: 'freighter',
+          reason: 'not_found',
+        });
         return;
       }
       await requestAccess();
@@ -50,15 +55,26 @@ export function useWallet() {
       setPublicKey(key);
       setConnected(true);
       toast.success("Wallet connected");
+      analyticsService.track('wallet_connected', {
+        wallet_type: 'freighter',
+      });
       window.dispatchEvent(
         new CustomEvent("wallet-connected", { detail: { publicKey: key } })
       );
     } catch (err) {
       if (isUserRejection(err)) {
         toast.info("Connection request declined.");
+        analyticsService.track('wallet_connect_failed', {
+          wallet_type: 'freighter',
+          reason: 'user_rejected',
+        });
       } else {
         toast.error("Failed to connect wallet.");
         console.error(err);
+        analyticsService.track('wallet_connect_failed', {
+          wallet_type: 'freighter',
+          reason: 'error',
+        });
       }
     } finally {
       setIsConnecting(false);

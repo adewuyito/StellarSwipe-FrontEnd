@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, RefreshCw, X } from "lucide-react";
+import { AlertTriangle, RefreshCw, X, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTransactionStore } from "@/store/useTransactionStore";
+import { showNotification } from "@/lib/notifications";
+import { useNotificationPreference } from "@/hooks/useNotificationPreference";
+import analyticsService from "@/services/analytics";
 
 interface TransactionFailureProps {
   onRetry?: (preservedInput: Record<string, unknown> | null) => void;
@@ -13,6 +16,7 @@ interface TransactionFailureProps {
 export function TransactionFailure({ onRetry }: TransactionFailureProps) {
   const { error, showError, clearError, preservedInput, setPreservedInput } =
     useTransactionStore();
+  const { alertsEnabled, toggleAlerts } = useNotificationPreference();
 
   const handleRetry = useCallback(() => {
     const input = preservedInput;
@@ -25,6 +29,20 @@ export function TransactionFailure({ onRetry }: TransactionFailureProps) {
     clearError();
     setPreservedInput(null);
   }, [clearError, setPreservedInput]);
+
+  useEffect(() => {
+    if (!showError || !error) return;
+    if (alertsEnabled) {
+      showNotification("Trade Failed", {
+        body: error.message || "Something went wrong during the trade execution.",
+        icon: "⚠️",
+      });
+    }
+    analyticsService.track('trade_confirmation_failed', {
+      error_message: error.message || 'unknown_error',
+      error_code: error.code || undefined,
+    });
+  }, [showError, error, alertsEnabled]);
 
   if (!error) return null;
 
@@ -53,13 +71,27 @@ export function TransactionFailure({ onRetry }: TransactionFailureProps) {
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
-            <button
-              onClick={handleDismiss}
-              aria-label="Close"
-              className="absolute right-4 top-4 rounded-full p-1 text-foreground-subtle transition-colors hover:bg-surface-high hover:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
+            <div className="absolute right-4 top-4 flex gap-2">
+              <button
+                onClick={() => toggleAlerts(!alertsEnabled)}
+                aria-label={alertsEnabled ? "Disable outcome alerts" : "Enable outcome alerts"}
+                className="rounded-full p-1 text-foreground-subtle transition-colors hover:bg-surface-high hover:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title={alertsEnabled ? "Alerts enabled" : "Alerts disabled"}
+              >
+                {alertsEnabled ? (
+                  <Bell className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <BellOff className="h-4 w-4" aria-hidden="true" />
+                )}
+              </button>
+              <button
+                onClick={handleDismiss}
+                aria-label="Close"
+                className="rounded-full p-1 text-foreground-subtle transition-colors hover:bg-surface-high hover:text-foreground-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
 
             <div className="mb-4 flex justify-center">
               <motion.div

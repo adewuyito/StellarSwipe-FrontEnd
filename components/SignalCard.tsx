@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   motion,
   useMotionValue,
   useTransform,
   AnimatePresence,
 } from "framer-motion";
-import { TrendingUp, TrendingDown, Minus, X, Zap, Check } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, X, Zap, Check, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SignalBadge } from "@/components/SignalBadge";
 import { SignalTimestamp } from "@/components/SignalTimestamp";
@@ -16,6 +16,7 @@ import { TradeModal } from "@/components/TradeModal";
 import { cn } from "@/lib/utils";
 import { MiniChart } from "./chart/MiniChart";
 import { useDemoModeStore } from "@/store/useDemoModeStore";
+import analyticsService from "@/services/analytics";
 
 interface ROIPoint {
   value: number;
@@ -57,8 +58,11 @@ export function SignalCard({
 }: SignalCardProps) {
   const [dismissed, setDismissed] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copiedFeedback, setCopiedFeedback] = useState(false);
   const { isDemoMode } = useDemoModeStore();
   const executingRef = useRef(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-18, 18]);
@@ -75,12 +79,20 @@ export function SignalCard({
 
   function handlePass() {
     setDismissed(true);
+    analyticsService.track('swipe_action', {
+      direction: 'pass',
+      signal_id: pair,
+    });
     onPass?.();
   }
 
   function handleExecuteTrade() {
     if (executingRef.current) return;
     executingRef.current = true;
+    analyticsService.track('swipe_action', {
+      direction: 'trade',
+      signal_id: pair,
+    });
     setModalOpen(true);
   }
 
@@ -102,6 +114,52 @@ export function SignalCard({
       else handleExecuteTrade();
     }
   }
+
+  function handleCopyLink() {
+    const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}?signal=${pair}&price=${executionPrice}&target=${projectedTarget}&signal_type=${signal}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedFeedback(true);
+    setShowShareMenu(false);
+  }
+
+  function handleShare() {
+    const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}?signal=${pair}&price=${executionPrice}&target=${projectedTarget}&signal_type=${signal}`;
+    const shareText = `Check out this ${signal} signal for ${pair} on StellarSwipe: ${shareUrl}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'StellarSwipe Signal',
+        text: shareText,
+        url: shareUrl,
+      }).catch(err => {
+        if (err.name !== 'AbortError') console.error('Share failed:', err);
+      });
+    } else {
+      // Fallback: Open Twitter share
+      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+      window.open(twitterUrl, '_blank', 'width=550,height=420');
+    }
+    setShowShareMenu(false);
+  }
+
+  useEffect(() => {
+    if (copiedFeedback) {
+      const timer = setTimeout(() => setCopiedFeedback(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copiedFeedback]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(event.target as Node)) {
+        setShowShareMenu(false);
+      }
+    }
+    if (showShareMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showShareMenu]);
 
   function handleDragEnd(_: unknown, info: { offset: { x: number } }) {
     if (info.offset.x > SWIPE_THRESHOLD) {
@@ -159,7 +217,40 @@ export function SignalCard({
           >
             <div className="flex items-center justify-between">
               <span className="font-semibold text-base sm:text-lg">{pair}</span>
-              <SignalBadge signal={signal} />
+              <div className="flex items-center gap-2">
+                <div className="relative" ref={shareMenuRef}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowShareMenu(!showShareMenu)}
+                    aria-label={`Share ${pair} signal`}
+                    aria-expanded={showShareMenu}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Share2 size={16} />
+                  </Button>
+                  {showShareMenu && (
+                    <div className="absolute right-0 top-full mt-1 bg-card border rounded-lg shadow-lg z-20 min-w-[150px] p-1">
+                      <button
+                        onClick={handleCopyLink}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded flex items-center gap-2"
+                        aria-label="Copy link to clipboard"
+                      >
+                        {copiedFeedback ? <Check size={14} className="text-green-600" /> : '🔗'}
+                        {copiedFeedback ? 'Copied!' : 'Copy Link'}
+                      </button>
+                      <button
+                        onClick={handleShare}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded flex items-center gap-2"
+                        aria-label="Share via Web Share or Twitter"
+                      >
+                        📤 Share
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <SignalBadge signal={signal} />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">

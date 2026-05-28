@@ -1,0 +1,63 @@
+{
+  "common": {
+    "loading": "Ye'o nlo",
+    "error": "Aṣiṣe",
+    "success": "Aṣeyọ",
+    "close": "Ṣi ìlẹ̀kùn",
+    "dismiss": "Yọ",
+    "retry": "Gbiyanju Lẹhin",
+    "back": "Padà",
+    "next": "Atẹlẹ",
+    "continue": "Tẹsìwaju",
+    "cancel": "Fagile"
+  },
+  "header": {
+    "title": "StellarSwipe",
+    "dashboard": "Àpéjọ",
+    "leaderboard": "Àtìkọ̀",
+    "portfolio": "Ìkópọ̀",
+    "profile": "Ẹrèkó",
+    "settings": "Àwọn Ìtumọ"
+  },
+  "signals": {
+    "signal_feed": "Àkúbù Ìyẹ",
+    "buy_signal": "Ìyẹ RÁ",
+    "sell_signal": "Ìyẹ TÀ",
+    "execution_price": "Iye Ìfẹ̀",
+    "confidence": "Ìgbẹ́kẹ̀lẹ̀",
+    "target": "Ibi Amọ",
+    "roi": "Owó Èrò",
+    "swipe_or_use_keys": "Fa gbe tàbí lo ← → àwọn bọtini",
+    "pass": "Kọjá",
+    "execute_trade": "Ṣe Ìtúnú",
+    "demo_trade": "Àpẹ̀rẹ Ìtúnú",
+    "share": "Pín"
+  },
+  "trade": {
+    "trade_executed": "Ìtúnú Ti Ṣegun",
+    "trade_failed": "Ìtúnú Ti Parun",
+    "swap_completed": "Iyipada rẹ ti ṣegun ni ireti",
+    "view_portfolio": "Wo Ìkópọ̀",
+    "continue_swiping": "Tẹsìwaju Sísúra",
+    "transaction": "Ìtúnú"
+  },
+  "notifications": {
+    "enable_notifications": "Mu Àkíyèsi Sínú",
+    "notifications_disabled": "Àkíyèsi afi wọlé. Wo àwọn ìtumọ aṣàwáàkì rẹ láti mu wọ́ sínú.",
+    "trade_success": "Ìtúnú Ti Ṣegun",
+    "trade_failure": "Ìtúnú Ti Parun"
+  },
+  "wallet": {
+    "connect_wallet": "Ṣo Ẹpo wa",
+    "disconnect_wallet": "Yi Ẹpo wa Kúrò",
+    "wallet_connected": "Ẹpo wa ṣo wa",
+    "wallet_disconnected": "Ẹpo wa kúrò",
+    "connection_failed": "Kò ṣe ìpinnu láti ṣo Ẹpo wa",
+    "connection_declined": "Ibeere ìṣopọ̀ ti kọ́rèjú"
+  },
+  "footer": {
+    "about": "Nípa",
+    "analytics": "Àkúkọ̀ Nínú",
+    "documentation": "Fìlẹ̀-ìwé"
+  }
+}
