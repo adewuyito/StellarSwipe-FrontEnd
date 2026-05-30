@@ -12,6 +12,7 @@ import { NETWORK_PASSPHRASE } from "@/lib/stellar";
 import { walletToast } from "@/lib/walletToast";
 import { traceWorker } from "@/src/tracing/worker-tracing.service";
 import analyticsService from "@/services/analytics";
+import type { WalletConnectErrorReason } from "@/components/WalletConnectErrorModal";
 
 function isUserRejection(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -36,13 +37,20 @@ export function useWallet() {
   } = useWalletStore();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isSigning, setIsSigning] = useState(false);
+  const [connectError, setConnectError] = useState<WalletConnectErrorReason>(null);
+
+  function clearConnectError() {
+    setConnectError(null);
+  }
 
   async function connect() {
     try {
       setIsConnecting(true);
+      setConnectError(null);
       const connectedResponse = await isConnected();
       if (!connectedResponse?.isConnected) {
         walletToast.notFound();
+        setConnectError("not_found");
         analyticsService.track('wallet_connect_failed', {
           wallet_type: 'freighter',
           reason: 'not_found',
@@ -70,6 +78,7 @@ export function useWallet() {
         });
       } else {
         walletToast.connectError();
+        setConnectError("error");
         console.error(err);
         analyticsService.track('wallet_connect_failed', {
           wallet_type: 'freighter',
@@ -119,5 +128,7 @@ export function useWallet() {
     sign,
     isConnecting,
     isSigning,
+    connectError,
+    clearConnectError,
   };
 }

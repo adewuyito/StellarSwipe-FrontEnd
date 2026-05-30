@@ -2,14 +2,18 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
+import { usePortfolio } from "@/hooks/usePortfolio";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, LogOut, ChevronDown } from "lucide-react";
+import { Check, Copy, LogOut, ChevronDown, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function WalletDropdown() {
   const { publicKey, disconnect } = useWallet();
+  const { refetch } = usePortfolio();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshed, setRefreshed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const truncated = publicKey
@@ -22,6 +26,19 @@ export function WalletDropdown() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [publicKey]);
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    setRefreshed(false);
+    try {
+      await refetch();
+      setRefreshed(true);
+      setTimeout(() => setRefreshed(false), 2500);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, refetch]);
 
   // Close on outside click
   useEffect(() => {
@@ -91,6 +108,40 @@ export function WalletDropdown() {
           </p>
 
           <hr className="border-border" />
+
+          {/* Refresh balance */}
+          <button
+            role="menuitem"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            aria-label={
+              isRefreshing
+                ? "Refreshing wallet balance…"
+                : refreshed
+                ? "Balance refreshed"
+                : "Refresh wallet balance"
+            }
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {refreshed ? (
+              <Check className="h-4 w-4 text-green-500" aria-hidden="true" />
+            ) : (
+              <RefreshCw
+                className={cn(
+                  "h-4 w-4",
+                  isRefreshing && "animate-spin text-blue-400"
+                )}
+                aria-hidden="true"
+              />
+            )}
+            <span aria-live="polite">
+              {isRefreshing
+                ? "Refreshing…"
+                : refreshed
+                ? "Balance updated"
+                : "Refresh balance"}
+            </span>
+          </button>
 
           {/* Copy */}
           <button

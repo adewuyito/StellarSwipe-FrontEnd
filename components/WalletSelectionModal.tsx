@@ -6,6 +6,7 @@ import { X, Wallet, Loader2, ExternalLink, CheckCircle2, AlertCircle } from "luc
 import { isConnected } from "@stellar/freighter-api";
 import { useWallet } from "@/hooks/useWallet";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { WalletConnectErrorModal } from "@/components/WalletConnectErrorModal";
 
 interface WalletSelectionModalProps {
   open: boolean;
@@ -32,7 +33,7 @@ const WALLET_OPTIONS: WalletOption[] = [
 type DetectionState = "idle" | "detecting" | "detected" | "not-found";
 
 export function WalletSelectionModal({ open, onClose }: WalletSelectionModalProps) {
-  const { connect, isConnecting } = useWallet();
+  const { connect, isConnecting, connectError, clearConnectError } = useWallet();
   const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
   const [detection, setDetection] = useState<Record<string, DetectionState>>({
     freighter: "idle",
@@ -88,11 +89,35 @@ export function WalletSelectionModal({ open, onClose }: WalletSelectionModalProp
 
     setSelectedWallet(wallet.id);
     await connect();
-    onClose();
+    // connect() sets connectError on failure; on success connectError stays null.
+    // The WalletConnectErrorModal below reacts to connectError automatically.
+    // We close the selection modal only when there is no error — checked via
+    // the store value after the async call settles.
   }
 
+  function handleErrorModalClose() {
+    clearConnectError();
+    setSelectedWallet(null);
+  }
+
+  function handleRetryFromError() {
+    clearConnectError();
+    setSelectedWallet(null);
+    // Re-open the selection modal (it is still mounted; just clear error state)
+  }
+
+  // Close selection modal on successful connection
+  useEffect(() => {
+    if (!isConnecting && !connectError && selectedWallet) {
+      // connect() finished without error — wallet connected successfully
+      onClose();
+      setSelectedWallet(null);
+    }
+  }, [isConnecting, connectError, selectedWallet, onClose]);
+
   return (
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       {open && (
         <motion.div
           className="fixed inset-0 z-modal flex items-center justify-center"
@@ -212,6 +237,15 @@ export function WalletSelectionModal({ open, onClose }: WalletSelectionModalProp
         </motion.div>
       )}
     </AnimatePresence>
+
+      {/* Wallet connect error modal — shown when connection fails */}
+      <WalletConnectErrorModal
+        open={!!connectError}
+        reason={connectError}
+        onClose={handleErrorModalClose}
+        onRetry={handleRetryFromError}
+      />
+    </>
   );
 }
 
