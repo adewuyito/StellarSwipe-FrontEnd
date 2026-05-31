@@ -7,6 +7,7 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useDemoModeStore } from "@/store/useDemoModeStore";
 import { FeeDisclosurePanel } from "@/components/FeeDisclosurePanel";
 import { SlippageWarning } from "@/components/SlippageWarning";
+import { usePriceFormat } from "@/hooks/usePriceFormat";
 
 type OrderType = "LIMIT" | "MARKET";
 
@@ -51,6 +52,7 @@ export function TradeModal({
   // Slippage warning: shown when estimated slippage exceeds threshold
   const [slippageAcknowledged, setSlippageAcknowledged] = useState(false);
   const { isDemoMode } = useDemoModeStore();
+  const fmt = usePriceFormat();
 
   // Live-region ref for announcing order-type changes to screen readers
   const liveRegionRef = useRef<HTMLSpanElement>(null);
@@ -289,9 +291,9 @@ export function TradeModal({
                   </span>
                   <div
                     className="w-full rounded-lg bg-accent-market/40 border border-accent-market/30 px-3 py-2 text-accent-market text-sm font-mono"
-                    aria-label={`Current market price: $${marketPrice.toFixed(4)} USDC`}
+                    aria-label={`Current market price: ${fmt(marketPrice)} USDC`}
                   >
-                    ${marketPrice.toFixed(4)} USDC
+                    {fmt(marketPrice)} USDC
                   </div>
                 </div>
               )}

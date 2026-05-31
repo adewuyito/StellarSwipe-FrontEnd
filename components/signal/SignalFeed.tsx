@@ -9,6 +9,7 @@ import { SignalEmptyState } from "@/components/SignalEmptyState";
 import { SignalFeedFilters } from "@/components/SignalFeedFilters";
 import { SignalSortControls } from "@/components/SignalSortControls";
 import { SignalFilterBottomSheet } from "@/components/SignalFilterBottomSheet";
+import { PricePrecisionToggle } from "@/components/PricePrecisionToggle";
 import { useSignalFilterStore } from "@/store/useSignalFilterStore";
 import type { Signal } from "@/lib/signals";
 import { Search, X, SlidersHorizontal } from "lucide-react";
@@ -147,6 +148,8 @@ export function SignalFeed() {
         <div className="flex flex-col items-end gap-2">
           {/* Sort controls — persistent across browsing */}
           <SignalSortControls />
+          {/* Price precision toggle */}
+          <PricePrecisionToggle />
           {/* #98: show consistent loading state */}
           <div className="text-right text-sm text-foreground-muted" aria-live="polite" aria-atomic="true">
             {isFetching && !allSignals.length

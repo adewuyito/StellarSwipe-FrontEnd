@@ -20,6 +20,7 @@ import { PremiumSignalBadge } from "@/components/PremiumSignalBadge";
 import { ProviderRatingBadge } from "@/components/ProviderRatingBadge";
 import { useDemoModeStore } from "@/store/useDemoModeStore";
 import analyticsService from "@/services/analytics";
+import { usePriceFormat } from "@/hooks/usePriceFormat";
 
 interface ROIPoint {
   value: number;
@@ -82,6 +83,7 @@ export function SignalCard({
   const [copiedFeedback, setCopiedFeedback] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const { isDemoMode } = useDemoModeStore();
+  const fmt = usePriceFormat();
   const executingRef = useRef(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
 
@@ -363,7 +365,7 @@ export function SignalCard({
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-muted-foreground">Execution Price</p>
-                <p className="font-mono font-semibold">${executionPrice.toFixed(4)}</p>
+                <p className="font-mono font-semibold">{fmt(executionPrice)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Confidence</p>
@@ -371,7 +373,7 @@ export function SignalCard({
               </div>
               <div>
                 <p className="text-muted-foreground">Target</p>
-                <p className="font-mono font-semibold">${projectedTarget.toFixed(4)}</p>
+                <p className="font-mono font-semibold">{fmt(projectedTarget)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">ROI</p>
