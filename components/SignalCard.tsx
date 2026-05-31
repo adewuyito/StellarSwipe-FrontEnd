@@ -20,6 +20,8 @@ import { PremiumSignalBadge } from "@/components/PremiumSignalBadge";
 import { ProviderRatingBadge } from "@/components/ProviderRatingBadge";
 import { useDemoModeStore } from "@/store/useDemoModeStore";
 import analyticsService from "@/services/analytics";
+import { toast } from "@/lib/toast";
+import type { PositionDetails } from "@/components/TradeModal";
 
 interface ROIPoint {
   value: number;
@@ -84,12 +86,13 @@ export function SignalCard({
   const { isDemoMode } = useDemoModeStore();
   const executingRef = useRef(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
+  const hasVibratedRef = useRef(false);
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-18, 18]);
 
-  const tradeOpacity = useTransform(x, [30, SWIPE_THRESHOLD], [0, 1]);
-  const passOpacity = useTransform(x, [-30, -SWIPE_THRESHOLD], [0, 1]);
+  const tradeOpacity = useTransform(x, [20, SWIPE_THRESHOLD], [0, 1]);
+  const passOpacity = useTransform(x, [-20, -SWIPE_THRESHOLD], [0, 1]);
 
   if (loading) return <TradeSkeleton />;
 
@@ -121,9 +124,15 @@ export function SignalCard({
     executingRef.current = false;
   }
 
-  function handleModalConfirm() {
+  function handleModalConfirm(details: PositionDetails) {
     setModalOpen(false);
     executingRef.current = false;
+    const size = parseFloat(details.amount || "0");
+    toast.success(`${signal} position opened`, {
+      description: `Entry $${details.price.toFixed(4)} · Size ${size > 0 ? size.toFixed(2) : "—"} XLM`,
+      duration: 6000,
+      link: { href: "/app", label: "View history" },
+    });
     onTrade?.(pair, executionPrice);
   }
 
@@ -166,6 +175,18 @@ export function SignalCard({
     const timer = window.setTimeout(() => setCopiedFeedback(false), 2000);
     return () => clearTimeout(timer);
   }, [copiedFeedback]);
+
+  useEffect(() => {
+    return x.on("change", (latest) => {
+      const abs = Math.abs(latest);
+      if (abs >= SWIPE_THRESHOLD && !hasVibratedRef.current) {
+        hasVibratedRef.current = true;
+        navigator.vibrate?.(8);
+      } else if (abs < SWIPE_THRESHOLD * 0.6) {
+        hasVibratedRef.current = false;
+      }
+    });
+  }, [x]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -216,7 +237,7 @@ export function SignalCard({
         className="w-full p-4 flex justify-between items-center hover:bg-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       >
         <span className="font-medium">{signal.asset}</span>
-        <span className={signal.action === "BUY" ? "text-green-600" : "text-red-600"}>
+        <span className={signal.action === "BUY" ? "text-accent-success" : "text-accent-danger"}>
           {signal.action}
         </span>
         <span className="text-muted-foreground">{signal.confidence}%</span>
@@ -234,8 +255,9 @@ export function SignalCard({
           dragSnapToOrigin
           dragMomentum={false}
           dragDirectionLock
-          dragElastic={0.08}
-          dragConstraints={{ left: 0, right: 0 }}
+          dragConstraints={{ left: -180, right: 180 }}
+          dragElastic={0.15}
+          dragTransition={{ bounceStiffness: 600, bounceDamping: 22 }}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           exit={{ x: 0, opacity: 0, scale: 0.85, transition: { duration: 0.25 } }}
@@ -275,9 +297,9 @@ export function SignalCard({
                     <span className="text-muted-foreground">Entry</span>
                     <span>{signal.stats.entryPrice}</span>
                     <span className="text-muted-foreground">Target</span>
-                    <span className="text-green-600">{signal.stats.targetPrice}</span>
+                    <span className="text-accent-success">{signal.stats.targetPrice}</span>
                     <span className="text-muted-foreground">Stop Loss</span>
-                    <span className="text-red-600">{signal.stats.stopLoss}</span>
+                    <span className="text-accent-danger">{signal.stats.stopLoss}</span>
                     <span className="text-muted-foreground">R/R</span>
                     <span>{signal.stats.riskReward}</span>
                   </div>
@@ -343,7 +365,7 @@ export function SignalCard({
                         className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded flex items-center gap-2"
                         aria-label="Copy link to clipboard"
                       >
-                        {copiedFeedback ? <Check size={14} className="text-green-600" /> : "🔗"}
+                        {copiedFeedback ? <Check size={14} className="text-accent-success" /> : "🔗"}
                         {copiedFeedback ? "Copied!" : "Copy Link"}
                       </button>
                       <button
@@ -375,7 +397,7 @@ export function SignalCard({
               </div>
               <div>
                 <p className="text-muted-foreground">ROI</p>
-                <p className={cn("font-semibold", isPositive ? "text-green-600" : "text-red-600")}>{isPositive ? "+" : ""}{roi}%</p>
+                <p className={cn("font-semibold", isPositive ? "text-accent-success" : "text-accent-danger")}>{isPositive ? "+" : ""}{roi}%</p>
               </div>
             </div>
 
@@ -383,7 +405,7 @@ export function SignalCard({
               <DirectionIcon
                 size={16}
                 className={cn(
-                  signal === "BUY" ? "text-green-600" : signal === "SELL" ? "text-red-600" : "text-gray-500"
+                  signal === "BUY" ? "text-accent-success" : signal === "SELL" ? "text-accent-danger" : "text-foreground-subtle"
                 )}
               />
               <MiniChart data={roiHistory.map((p) => p.value)} className="flex-1" />
@@ -393,7 +415,7 @@ export function SignalCard({
 
             {isPremium && !hasAccess && (
               <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5 text-sm">
-                <p className="font-medium text-yellow-400">Premium signal locked</p>
+                <p className="font-medium text-accent-warning">Premium signal locked</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Stake at least {requiredStake.toLocaleString()} XLM to unlock full analysis and trade execution.
                 </p>

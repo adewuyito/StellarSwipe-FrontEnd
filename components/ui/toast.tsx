@@ -59,6 +59,14 @@ export function ToastProvider() {
                       {toast.description}
                     </p>
                   ) : null}
+                  {toast.link ? (
+                    <a
+                      href={toast.link.href}
+                      className="mt-1.5 inline-block text-xs font-medium underline underline-offset-2 hover:opacity-75 transition-opacity"
+                    >
+                      {toast.link.label} →
+                    </a>
+                  ) : null}
                 </div>
 
                 <button

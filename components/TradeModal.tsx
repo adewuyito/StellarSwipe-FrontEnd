@@ -9,10 +9,16 @@ import { FeeDisclosurePanel } from "@/components/FeeDisclosurePanel";
 
 type OrderType = "LIMIT" | "MARKET";
 
+export interface PositionDetails {
+  amount: string;
+  price: number;
+  orderType: OrderType;
+}
+
 interface TradeModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm?: () => void;
+  onConfirm?: (details: PositionDetails) => void;
   walletBalance?: number;
   marketPrice?: number;
 }
@@ -64,7 +70,7 @@ export function TradeModal({ open, onClose, onConfirm, walletBalance = 250, mark
     setSubmitting(true);
     await mockBuildTx({ type, price, amount, stopLoss, positionLimit });
     setSubmitting(false);
-    onConfirm ? onConfirm() : onClose();
+    onConfirm ? onConfirm({ amount, price, orderType: type }) : onClose();
   }, [type, price, amount, stopLoss, positionLimit, onClose, onConfirm]);
 
   const networkFee = "0.00001 XLM";

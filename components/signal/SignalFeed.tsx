@@ -12,6 +12,8 @@ import { SignalFilterBottomSheet } from "@/components/SignalFilterBottomSheet";
 import { useSignalFilterStore } from "@/store/useSignalFilterStore";
 import type { Signal } from "@/lib/signals";
 import { Search, X, SlidersHorizontal } from "lucide-react";
+import { useSyncStatus } from "@/hooks/useSyncStatus";
+import { SyncStatusIndicator } from "@/components/SyncStatusIndicator";
 
 interface SignalResponse {
   items: Signal[];
@@ -108,6 +110,7 @@ export function SignalFeed() {
   }, [pathname]);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const syncStatus = useSyncStatus(isFetching);
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -147,14 +150,7 @@ export function SignalFeed() {
         <div className="flex flex-col items-end gap-2">
           {/* Sort controls — persistent across browsing */}
           <SignalSortControls />
-          {/* #98: show consistent loading state */}
-          <div className="text-right text-sm text-foreground-muted" aria-live="polite" aria-atomic="true">
-            {isFetching && !allSignals.length
-              ? "Loading signals..."
-              : isFetching
-              ? "Refreshing..."
-              : "Scroll down to load more."}
-          </div>
+          <SyncStatusIndicator status={syncStatus} />
         </div>
       </div>
 
