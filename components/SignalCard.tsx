@@ -14,14 +14,14 @@ import { SignalBadge } from "@/components/SignalBadge";
 import { SignalTimestamp } from "@/components/SignalTimestamp";
 import { TradeSkeleton } from "@/components/TradeSkeleton";
 import { TradeModal } from "@/components/TradeModal";
+import { SignalConflictNotice, type SignalConflictReason } from "@/components/SignalConflictNotice";
 import { cn } from "@/lib/utils";
 import { MiniChart } from "./chart/MiniChart";
 import { PremiumSignalBadge } from "@/components/PremiumSignalBadge";
 import { ProviderRatingBadge } from "@/components/ProviderRatingBadge";
 import { useDemoModeStore } from "@/store/useDemoModeStore";
 import analyticsService from "@/services/analytics";
-import { toast } from "@/lib/toast";
-import type { PositionDetails } from "@/components/TradeModal";
+import { usePriceFormat } from "@/hooks/usePriceFormat";
 
 interface ROIPoint {
   value: number;
@@ -42,6 +42,7 @@ interface SignalCardProps {
   isPremium?: boolean;
   hasAccess?: boolean;
   requiredStake?: number;
+  conflictReason?: SignalConflictReason;
   onTrade?: (pair: string, price: number) => void;
   onPass?: () => void;
 }
@@ -75,6 +76,7 @@ export function SignalCard({
   isPremium = false,
   hasAccess = true,
   requiredStake = 1000,
+  conflictReason,
   onTrade,
   onPass,
 }: SignalCardProps) {
@@ -84,6 +86,7 @@ export function SignalCard({
   const [copiedFeedback, setCopiedFeedback] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const { isDemoMode } = useDemoModeStore();
+  const fmt = usePriceFormat();
   const executingRef = useRef(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const hasVibratedRef = useRef(false);
@@ -385,7 +388,7 @@ export function SignalCard({
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="text-muted-foreground">Execution Price</p>
-                <p className="font-mono font-semibold">${executionPrice.toFixed(4)}</p>
+                <p className="font-mono font-semibold">{fmt(executionPrice)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Confidence</p>
@@ -393,7 +396,7 @@ export function SignalCard({
               </div>
               <div>
                 <p className="text-muted-foreground">Target</p>
-                <p className="font-mono font-semibold">${projectedTarget.toFixed(4)}</p>
+                <p className="font-mono font-semibold">{fmt(projectedTarget)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">ROI</p>
@@ -422,6 +425,14 @@ export function SignalCard({
               </div>
             )}
 
+            {conflictReason && (
+              <SignalConflictNotice
+                reason={conflictReason}
+                onRefresh={onPass}
+                onChooseAnother={onPass}
+              />
+            )}
+
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <SignalTimestamp updatedAt={timestamp} />
               <p className="text-xs text-muted-foreground">Swipe or use ← → keys</p>
@@ -441,9 +452,9 @@ export function SignalCard({
               <Button
                 size="sm"
                 onClick={handleExecuteTrade}
-                disabled={modalOpen || (isPremium && !hasAccess)}
+                disabled={modalOpen || (isPremium && !hasAccess) || !!conflictReason}
                 className="flex-1 active:scale-95"
-                aria-label={`Execute trade: ${signal} signal for ${pair} at ${executionPrice}${isDemoMode ? " (demo)" : ""}${isPremium && !hasAccess ? " (locked — stake required)" : ""}`}
+                aria-label={`Execute trade: ${signal} signal for ${pair} at ${executionPrice}${isDemoMode ? " (demo)" : ""}${isPremium && !hasAccess ? " (locked — stake required)" : ""}${conflictReason ? " (unavailable — signal conflict)" : ""}`}
               >
                 <Zap size={16} className="mr-1" />
                 {isDemoMode ? "Demo Trade" : "Execute Trade"}

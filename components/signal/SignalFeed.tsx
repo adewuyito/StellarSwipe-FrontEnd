@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { InfiniteData } from "@tanstack/query-core";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SignalEmptyState } from "@/components/SignalEmptyState";
 import { SignalFeedFilters } from "@/components/SignalFeedFilters";
 import { SignalSortControls } from "@/components/SignalSortControls";
 import { SignalFilterBottomSheet } from "@/components/SignalFilterBottomSheet";
+import { PricePrecisionToggle } from "@/components/PricePrecisionToggle";
+import { ExpiredSignalBanner } from "@/components/ExpiredSignalBanner";
 import { useSignalFilterStore } from "@/store/useSignalFilterStore";
 import type { Signal } from "@/lib/signals";
 import { Search, X, SlidersHorizontal } from "lucide-react";
@@ -28,15 +29,15 @@ const PAGE_SIZE = 10;
 const STALE_TIME = 1000 * 60 * 5;
 
 export function SignalFeed() {
-  const pathname = usePathname();
-  // #99: persist scroll position across navigation
-  const scrollPosRef = useRef<number>(0);
   const feedRef = useRef<HTMLDivElement | null>(null);
 
   // #99: provider search state (persisted in filter store)
   const { direction, asset, provider, sortOrder, setProvider } = useSignalFilterStore();
   const [providerSearch, setProviderSearch] = useState(provider);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
+  // Track whether the last auto-load attempt failed so we can show the manual fallback
+  const [autoLoadFailed, setAutoLoadFailed] = useState(false);
 
   const {
     data,
@@ -59,9 +60,7 @@ export function SignalFeed() {
     },
     getNextPageParam: (lastPage: SignalResponse) => lastPage.nextPage,
     initialPageParam: 1,
-    // #98: cache pages for 5 minutes to avoid re-fetching recently viewed content
     staleTime: STALE_TIME,
-    // #98: keep previous data while fetching next page for smooth loading
     placeholderData: (prev) => prev,
   });
 
@@ -100,32 +99,33 @@ export function SignalFeed() {
     return copy;
   }, [filteredSignals, sortOrder]);
 
-  useEffect(() => {
-    const saved = sessionStorage.getItem(`scroll:${pathname}`);
-    if (saved) window.scrollTo(0, parseInt(saved, 10));
-
-    return () => {
-      sessionStorage.setItem(`scroll:${pathname}`, String(window.scrollY));
-    };
-  }, [pathname]);
-
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const syncStatus = useSyncStatus(isFetching);
 
   const loadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+    if (hasNextPage && !isFetchingNextPage) {
+      setAutoLoadFailed(false);
+      fetchNextPage().catch(() => setAutoLoadFailed(true));
+    }
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  // Manual fallback: called from the button when auto-scroll failed
+  const handleManualLoadMore = useCallback(() => {
+    setAutoLoadFailed(false);
+    fetchNextPage().catch(() => setAutoLoadFailed(true));
+  }, [fetchNextPage]);
 
   useEffect(() => {
     const element = sentinelRef.current;
-    if (!element || !hasNextPage || isFetchingNextPage) return;
+    // If auto-load previously failed, don't re-trigger via IntersectionObserver
+    if (!element || !hasNextPage || isFetchingNextPage || autoLoadFailed) return;
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0]?.isIntersecting) loadMore(); },
       { rootMargin: "240px" }
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, loadMore]);
+  }, [hasNextPage, isFetchingNextPage, loadMore, autoLoadFailed]);
 
   // #99: sync provider search to filter store
   const handleProviderSearch = useCallback((value: string) => {
@@ -150,7 +150,16 @@ export function SignalFeed() {
         <div className="flex flex-col items-end gap-2">
           {/* Sort controls — persistent across browsing */}
           <SignalSortControls />
-          <SyncStatusIndicator status={syncStatus} />
+          {/* Price precision toggle */}
+          <PricePrecisionToggle />
+          {/* #98: show consistent loading state */}
+          <div className="text-right text-sm text-foreground-muted" aria-live="polite" aria-atomic="true">
+            {isFetching && !allSignals.length
+              ? "Loading signals..."
+              : isFetching
+              ? "Refreshing..."
+              : "Scroll down to load more."}
+          </div>
         </div>
       </div>
 
@@ -254,35 +263,52 @@ export function SignalFeed() {
             ))}
           </div>
         ) : (
-          signals.map((signal) => (
-            // #101: accessible article with descriptive aria-label
-            <article
-              key={signal.id}
-              aria-label={`${signal.ticker} ${signal.action} signal, ${signal.confidence}% confidence`}
-              className="rounded-3xl border border-white/10 bg-slate-950/90 p-4 shadow-sm shadow-slate-950/20 transition hover:-translate-y-0.5 sm:p-6"
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.3em] text-foreground-muted">
-                    <time dateTime={signal.timestamp}>
-                      {new Date(signal.timestamp).toLocaleString()}
-                    </time>
-                  </p>
-                  <h3 className="mt-2 text-base font-semibold tracking-tight text-white sm:text-xl">
-                    {signal.ticker} • {signal.action}
-                  </h3>
-                </div>
-                {/* #101: confidence badge with aria-label */}
+          signals.map((signal) => {
+            const isExpired =
+              !!signal.expiresAt && new Date(signal.expiresAt) < new Date();
+
+            return (
+              // #101: accessible article with descriptive aria-label
+              <article
+                key={signal.id}
+                aria-label={`${signal.ticker} ${signal.action} signal, ${signal.confidence}% confidence${isExpired ? ", expired" : ""}`}
+                className="rounded-3xl border border-white/10 bg-slate-950/90 p-4 shadow-sm shadow-slate-950/20 transition hover:-translate-y-0.5 sm:p-6"
+              >
+                {/* Expired banner — shown above content, clearly visible */}
+                {isExpired && (
+                  <div className="mb-3">
+                    <ExpiredSignalBanner onRefresh={() => refetch()} />
+                  </div>
+                )}
+
                 <div
-                  className="shrink-0 rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-sky-300 sm:px-4 sm:py-2 sm:text-sm"
-                  aria-label={`Confidence: ${signal.confidence} percent`}
+                  className={isExpired ? "opacity-60 pointer-events-none select-none" : ""}
+                  aria-hidden={isExpired}
                 >
-                  Confidence {signal.confidence}%
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-foreground-muted">
+                        <time dateTime={signal.timestamp}>
+                          {new Date(signal.timestamp).toLocaleString()}
+                        </time>
+                      </p>
+                      <h3 className="mt-2 text-base font-semibold tracking-tight text-white sm:text-xl">
+                        {signal.ticker} • {signal.action}
+                      </h3>
+                    </div>
+                    {/* #101: confidence badge with aria-label */}
+                    <div
+                      className="shrink-0 rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-sky-300 sm:px-4 sm:py-2 sm:text-sm"
+                      aria-label={`Confidence: ${signal.confidence} percent`}
+                    >
+                      Confidence {signal.confidence}%
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-foreground-muted">{signal.details}</p>
                 </div>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-foreground-muted">{signal.details}</p>
-            </article>
-          ))
+              </article>
+            );
+          })
         )}
       </div>
 
@@ -305,15 +331,23 @@ export function SignalFeed() {
           </p>
         )}
 
-        {hasNextPage && (
-          <Button
-            variant="outline"
-            onClick={loadMore}
-            disabled={isFetchingNextPage}
-            aria-label={isFetchingNextPage ? "Loading more signals" : "Load more signals"}
-          >
-            {isFetchingNextPage ? "Loading more..." : "Load more signals"}
-          </Button>
+        {/* Fallback button: shown when auto-scroll failed OR as a manual preference */}
+        {hasNextPage && (autoLoadFailed || !isFetchingNextPage) && (
+          <div className="flex flex-col items-center gap-2">
+            {autoLoadFailed && (
+              <p className="text-xs text-amber-400" role="alert" aria-live="assertive">
+                Auto-load failed. Load more manually.
+              </p>
+            )}
+            <Button
+              variant="outline"
+              onClick={handleManualLoadMore}
+              disabled={isFetchingNextPage}
+              aria-label={isFetchingNextPage ? "Loading more signals" : "Load more signals"}
+            >
+              {isFetchingNextPage ? "Loading more..." : "Load more signals"}
+            </Button>
+          </div>
         )}
       </div>
     </section>
