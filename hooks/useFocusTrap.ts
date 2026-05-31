@@ -2,11 +2,23 @@ import { useEffect, useRef } from "react";
 
 interface UseFocusTrapOptions {
   isActive: boolean;
-  initialFocus?: string; // CSS selector for initial focus element
+  /** CSS selector for the element to focus when the trap activates */
+  initialFocus?: string;
 }
 
+/**
+ * Traps keyboard focus inside a container while `isActive` is true.
+ *
+ * Behaviour:
+ * - Moves focus to `initialFocus` (or the first focusable element) on open.
+ * - Wraps Tab / Shift+Tab at the boundaries.
+ * - Restores focus to the previously-focused element on close.
+ * - If the previously-focused element is gone from the DOM, falls back to
+ *   `document.body` so the user is never left without a focus target.
+ */
 export function useFocusTrap({ isActive, initialFocus }: UseFocusTrapOptions) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // Captured when the trap activates, not when it deactivates.
   const previousActiveElement = useRef<Element | null>(null);
 
   useEffect(() => {
@@ -15,70 +27,73 @@ export function useFocusTrap({ isActive, initialFocus }: UseFocusTrapOptions) {
     const container = containerRef.current;
     if (!container) return;
 
-    // Store the previously focused element
+    // Capture the trigger element before we move focus away.
     previousActiveElement.current = document.activeElement;
 
-    // Get all focusable elements within the container
-    const getFocusableElements = () => {
-      const focusableSelectors = [
-        'button:not([disabled])',
-        'input:not([disabled])',
-        'select:not([disabled])',
-        'textarea:not([disabled])',
-        'a[href]',
-        '[tabindex]:not([tabindex="-1"])',
-        '[role="button"]:not([disabled])',
-        '[role="switch"]:not([disabled])'
-      ].join(', ');
+    const FOCUSABLE_SELECTORS = [
+      "button:not([disabled]):not([tabindex='-1'])",
+      "input:not([disabled]):not([tabindex='-1'])",
+      "select:not([disabled]):not([tabindex='-1'])",
+      "textarea:not([disabled]):not([tabindex='-1'])",
+      "a[href]:not([tabindex='-1'])",
+      "[tabindex]:not([tabindex='-1'])",
+      "[role='button']:not([disabled]):not([tabindex='-1'])",
+      "[role='switch']:not([disabled]):not([tabindex='-1'])",
+    ].join(", ");
 
-      return Array.from(container.querySelectorAll(focusableSelectors)) as HTMLElement[];
+    const getFocusableElements = (): HTMLElement[] =>
+      Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS)).filter(
+        (el) => !el.closest("[hidden]") && el.offsetParent !== null
+      );
+
+    // Move focus to the designated initial element (or first focusable).
+    const focusInitial = () => {
+      const elements = getFocusableElements();
+      if (elements.length === 0) return;
+      const target = initialFocus
+        ? (container.querySelector<HTMLElement>(initialFocus) ?? elements[0])
+        : elements[0];
+      target?.focus({ preventScroll: true });
     };
 
-    // Focus the initial element or first focusable element
-    const focusableElements = getFocusableElements();
-    if (focusableElements.length > 0) {
-      const initialElement = initialFocus 
-        ? container.querySelector(initialFocus) as HTMLElement
-        : focusableElements[0];
-      
-      if (initialElement) {
-        // Small delay to ensure modal is fully rendered
-        setTimeout(() => initialElement.focus(), 10);
-      }
-    }
+    // Small delay so the modal animation has started before we steal focus.
+    const focusTimer = setTimeout(focusInitial, 16);
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
+      if (e.key !== "Tab") return;
 
-      const focusableElements = getFocusableElements();
-      if (focusableElements.length === 0) return;
+      const elements = getFocusableElements();
+      if (elements.length === 0) return;
 
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      const active = document.activeElement;
 
       if (e.shiftKey) {
-        // Shift + Tab: moving backwards
-        if (document.activeElement === firstElement) {
+        if (active === first || !container.contains(active)) {
           e.preventDefault();
-          lastElement.focus();
+          last.focus({ preventScroll: true });
         }
       } else {
-        // Tab: moving forwards
-        if (document.activeElement === lastElement) {
+        if (active === last || !container.contains(active)) {
           e.preventDefault();
-          firstElement.focus();
+          first.focus({ preventScroll: true });
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      
-      // Restore focus to the previously focused element
-      if (previousActiveElement.current instanceof HTMLElement) {
-        previousActiveElement.current.focus();
+      clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+
+      // Restore focus — fall back to body if the element is gone from the DOM.
+      const prev = previousActiveElement.current;
+      if (prev instanceof HTMLElement && document.contains(prev)) {
+        prev.focus({ preventScroll: true });
+      } else {
+        (document.body as HTMLElement).focus();
       }
     };
   }, [isActive, initialFocus]);
