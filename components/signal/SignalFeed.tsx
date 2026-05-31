@@ -13,6 +13,8 @@ import { ExpiredSignalBanner } from "@/components/ExpiredSignalBanner";
 import { useSignalFilterStore } from "@/store/useSignalFilterStore";
 import type { Signal } from "@/lib/signals";
 import { Search, X, SlidersHorizontal } from "lucide-react";
+import { useSyncStatus } from "@/hooks/useSyncStatus";
+import { SyncStatusIndicator } from "@/components/SyncStatusIndicator";
 
 interface SignalResponse {
   items: Signal[];
@@ -98,6 +100,7 @@ export function SignalFeed() {
   }, [filteredSignals, sortOrder]);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const syncStatus = useSyncStatus(isFetching);
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {

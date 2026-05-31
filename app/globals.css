@@ -59,8 +59,8 @@
     --overlay:        0 0% 0%;
 
     --foreground:        210 40% 96%;
-    --foreground-muted:  215 20% 60%;
-    --foreground-subtle: 215 15% 40%;
+    --foreground-muted:  215 20% 65%;
+    --foreground-subtle: 215 15% 52%;
 
     --border:        217 30% 18%;
     --border-strong: 217 30% 28%;
@@ -68,11 +68,11 @@
     --ring:          217 91% 60%;
 
     --accent-primary:  217 91% 60%;
-    --accent-sky:      199 89% 60%;
-    --accent-success:  160 84% 39%;
-    --accent-danger:   0  72% 51%;
-    --accent-warning:  25 95% 53%;
-    --accent-market:   239 84% 67%;
+    --accent-sky:      199 89% 62%;
+    --accent-success:  160 84% 45%;
+    --accent-danger:   0  72% 57%;
+    --accent-warning:  25 95% 57%;
+    --accent-market:   239 84% 70%;
 
     --radius: 0.75rem;
 
@@ -115,8 +115,8 @@
     --overlay:        0 0% 0%;
 
     --foreground:        210 40% 96%;
-    --foreground-muted:  215 20% 60%;
-    --foreground-subtle: 215 15% 40%;
+    --foreground-muted:  215 20% 65%;
+    --foreground-subtle: 215 15% 52%;
 
     --border:        217 30% 18%;
     --border-strong: 217 30% 28%;
@@ -124,11 +124,11 @@
     --ring:          217 91% 60%;
 
     --accent-primary:  217 91% 60%;
-    --accent-sky:      199 89% 60%;
-    --accent-success:  160 84% 39%;
-    --accent-danger:   0  72% 51%;
-    --accent-warning:  25 95% 53%;
-    --accent-market:   239 84% 67%;
+    --accent-sky:      199 89% 62%;
+    --accent-success:  160 84% 45%;
+    --accent-danger:   0  72% 57%;
+    --accent-warning:  25 95% 57%;
+    --accent-market:   239 84% 70%;
   }
 
   /* Light theme — applied when <html class="light"> */
@@ -147,12 +147,12 @@
     --input:         0 0% 100%;
     --ring:          217 91% 60%;
 
-    --accent-primary:  217 91% 60%;
-    --accent-sky:      199 89% 48%;
-    --accent-success:  160 84% 32%;
-    --accent-danger:   0  72% 51%;
-    --accent-warning:  25 95% 45%;
-    --accent-market:   239 84% 60%;
+    --accent-primary:  217 91% 45%;
+    --accent-sky:      199 89% 32%;
+    --accent-success:  160 84% 30%;
+    --accent-danger:   0  72% 44%;
+    --accent-warning:  25 95% 38%;
+    --accent-market:   239 84% 50%;
 
     /* shadcn/ui compat aliases */
     --card:                var(--surface);

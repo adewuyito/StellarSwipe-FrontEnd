@@ -11,10 +11,16 @@ import { usePriceFormat } from "@/hooks/usePriceFormat";
 
 type OrderType = "LIMIT" | "MARKET";
 
+export interface PositionDetails {
+  amount: string;
+  price: number;
+  orderType: OrderType;
+}
+
 interface TradeModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm?: () => void;
+  onConfirm?: (details: PositionDetails) => void;
   walletBalance?: number;
   marketPrice?: number;
 }

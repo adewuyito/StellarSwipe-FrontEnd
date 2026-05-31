@@ -8,6 +8,7 @@ export interface ToastMessage {
   id: string;
   title: string;
   description?: string;
+  link?: { href: string; label: string };
   tone: ToastTone;
   duration: number;
 }
@@ -29,10 +30,10 @@ function generateToastId() {
 
 export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
-  enqueue: ({ title, description, tone, duration = DEFAULT_TOAST_DURATION }) => {
+  enqueue: ({ title, description, link, tone, duration = DEFAULT_TOAST_DURATION }) => {
     const id = generateToastId();
     set((state) => ({
-      toasts: [...state.toasts, { id, title, description, tone, duration }],
+      toasts: [...state.toasts, { id, title, description, link, tone, duration }],
     }));
 
     if (typeof window !== "undefined" && duration > 0) {
