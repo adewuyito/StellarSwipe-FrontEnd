@@ -6,6 +6,7 @@ import { X, Info } from "lucide-react";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { useDemoModeStore } from "@/store/useDemoModeStore";
 import { FeeDisclosurePanel } from "@/components/FeeDisclosurePanel";
+import { SlippageWarning } from "@/components/SlippageWarning";
 
 type OrderType = "LIMIT" | "MARKET";
 
@@ -47,6 +48,8 @@ export function TradeModal({
   const [positionLimit, setPositionLimit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [touched, setTouched] = useState({ limitPrice: false, amount: false });
+  // Slippage warning: shown when estimated slippage exceeds threshold
+  const [slippageAcknowledged, setSlippageAcknowledged] = useState(false);
   const { isDemoMode } = useDemoModeStore();
 
   // Live-region ref for announcing order-type changes to screen readers
@@ -66,12 +69,25 @@ export function TradeModal({
   const insufficient = total > walletBalance;
   const hasErrors = !!amountError || (type === "LIMIT" && !!limitPriceError);
   const disabled =
-    !amount || (type === "LIMIT" && !limitPrice) || insufficient || submitting || hasErrors;
+    !amount || (type === "LIMIT" && !limitPrice) || insufficient || submitting || hasErrors || showSlippageWarning;
+
+  // Estimate slippage: market orders use a fixed proxy; limit orders use
+  // the deviation between the user's limit price and the current market price.
+  const estimatedSlippage =
+    type === "MARKET"
+      ? 0.12 // proxy for AMM price impact shown in footer
+      : price > 0
+      ? Math.abs((price - marketPrice) / marketPrice) * 100
+      : 0;
+  const SLIPPAGE_THRESHOLD = 1; // percent
+  const showSlippageWarning =
+    estimatedSlippage > SLIPPAGE_THRESHOLD && !slippageAcknowledged && !!amount;
 
   // Reset form state when modal opens
   useEffect(() => {
     if (open) {
       setTouched({ limitPrice: false, amount: false });
+      setSlippageAcknowledged(false);
     }
   }, [open]);
 
@@ -455,6 +471,14 @@ export function TradeModal({
                 <p className="text-foreground font-medium mt-0.5">{execMethod}</p>
               </div>
             </div>
+
+            {/* Slippage warning — non-blocking, shown inline before confirm */}
+            <SlippageWarning
+              slippage={estimatedSlippage}
+              threshold={SLIPPAGE_THRESHOLD}
+              onConfirm={() => setSlippageAcknowledged(true)}
+              onCancel={onClose}
+            />
 
             {/* Confirm button */}
             <button
