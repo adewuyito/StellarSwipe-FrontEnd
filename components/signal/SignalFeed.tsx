@@ -275,7 +275,23 @@ export function SignalFeed() {
         availableMarkets={availableAssets}
       />
 
-      <div className="space-y-4" role="feed" aria-busy={isLoading} aria-label="Signal list">
+      <div
+        className="space-y-4"
+        role="feed"
+        aria-busy={isLoading}
+        aria-label="Signal list"
+        onKeyDown={(e) => {
+          if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+          const articles = Array.from(
+            (e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>("article[tabindex]")
+          );
+          const idx = articles.indexOf(document.activeElement as HTMLElement);
+          if (idx === -1) return;
+          e.preventDefault();
+          const next = e.key === "ArrowDown" ? articles[idx + 1] : articles[idx - 1];
+          next?.focus();
+        }}
+      >
         {isError && (
           <div
             role="alert"
@@ -326,8 +342,9 @@ export function SignalFeed() {
               // #101: accessible article with descriptive aria-label
               <article
                 key={signal.id}
-                aria-label={`${signal.ticker} ${signal.action} signal, ${signal.confidence}% confidence${isExpired ? ", expired" : ""}`}
-                className="rounded-3xl border border-white/10 bg-slate-950/90 p-4 shadow-sm shadow-slate-950/20 transition hover:-translate-y-0.5 sm:p-6"
+                tabIndex={0}
+                aria-label={`${signal.ticker} ${signal.action} signal, ${signal.confidence}% confidence${isExpired ? ", expired" : ""}. Use arrow keys to navigate between signals.`}
+                className="rounded-3xl border border-white/10 bg-slate-950/90 p-4 shadow-sm shadow-slate-950/20 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 sm:p-6"
               >
                 {/* Expired banner — shown above content, clearly visible */}
                 {isExpired && (
